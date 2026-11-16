@@ -1,0 +1,33 @@
+queries:
+- question: 每种订单状态的订单量和 GMV
+  sql: "SELECT orderstatus,\n       COUNT(DISTINCT orderkey) AS order_count,\n   \
+    \    ROUND(SUM(totalprice), 2) AS gmv\nFROM \"Orders\"\nGROUP BY orderstatus\n\
+    ORDER BY order_count DESC\n"
+  tags:
+  - 订单状态
+  - GMV
+  - 订单量
+  - 分组统计
+- question: 各客户细分市场的 GMV 排名
+  sql: "SELECT c.marketsegment,\n       COUNT(DISTINCT o.orderkey) AS order_count,\n\
+    \       ROUND(SUM(o.totalprice), 2) AS gmv\nFROM \"Customer\" c\nJOIN \"Orders\"\
+    \ o ON c.custkey = o.custkey\nGROUP BY c.marketsegment\nORDER BY gmv DESC\n"
+  tags:
+  - 客户细分市场
+  - GMV
+  - 关联查询
+  - 排名
+- question: 月度 GMV 和订单量趋势
+  sql: "SELECT DATE_TRUNC('month', orderdate) AS month,\n       ROUND(SUM(totalprice),\
+    \ 2)      AS gmv,\n       COUNT(*)                        AS order_count\nFROM\
+    \ \"Orders\"\nGROUP BY 1\nORDER BY 1\n"
+  tags:
+  - 月度趋势
+  - GMV
+  - 时间序列
+- question: 待处理订单有多少
+  sql: SELECT COUNT(*) FROM "Orders" WHERE orderstatus = 'P'
+  tags:
+  - 订单状态
+  - 待处理
+  - 计数

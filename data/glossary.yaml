@@ -1,0 +1,21 @@
+# 业务术语表（context engine 的同义词扩展来源）
+# term: 规范业务名；synonyms: 用户提问中可能出现的说法；meaning: 给 agent 的口径解释
+terms:
+  - term: GMV
+    synonyms: [成交额, 营收, 销售额, 交易额, gmv, 总金额]
+    meaning: SUM(totalprice)，订单总价之和，未扣退款，币种以源数据为准
+  - term: 订单量
+    synonyms: [订单数, 多少单, 订单总量, 单量]
+    meaning: COUNT(DISTINCT orderkey)，一个 orderkey 算一单，不是 lineitem 行数
+  - term: 客户数
+    synonyms: [客户总量, 多少个客户]
+    meaning: COUNT(DISTINCT custkey)
+  - term: 订单状态
+    synonyms: [状态, orderstatus, 履约状态]
+    meaning: F=已完成 Fulfilled，O=进行中 Open，P=待处理 Pending（禁止解释为 Partial）
+  - term: 客户细分市场
+    synonyms: [细分市场, 市场细分, marketsegment, 客群]
+    meaning: Customer.marketsegment，来自 c_mktsegment，如 BUILDING/AUTOMOBILE/FURNITURE
+  - term: 月度趋势
+    synonyms: [按月, 每个月, 月趋势, 月度GMV]
+    meaning: 用 DATE_TRUNC('month', orderdate) 分组，注意不完整月份要提示
