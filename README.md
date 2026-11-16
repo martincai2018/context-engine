@@ -1,5 +1,7 @@
 # Context Engine（Data Agent 上下文引擎）
 
+> 📺 完整使用演示（含真实输出与复现步骤）：[DEMO.md](DEMO.md)
+
 轻量级自研 context engine，以独立 MCP server 形态与 Wren 引擎平级接入 pi agent。
 回答"本次提问该带哪些上下文"：从 Wren MDL、业务术语表、golden SQL 中检索并组装
 受 token 预算约束的上下文包。
