@@ -1,0 +1,58 @@
+# Context Engine 回归评测集
+# 每条用例声明期望命中的语义对象（子集断言，不要求顺序）；
+# 维度：models 模型、glossary 口径术语、golden 问-SQL 对、views 视图、joins 关系
+cases:
+  - id: q01-status-gmv
+    question: 每种订单状态的成交额 GMV 是多少？
+    expect:
+      models: [Orders]
+      glossary: [GMV, 订单状态]
+      golden: ["每种订单状态的订单量和 GMV"]
+      joins: [CustomerOrders]
+
+  - id: q02-segment-rank
+    question: 哪个客户细分市场贡献的销售额最高？
+    expect:
+      models: [Customer, Orders]
+      glossary: [客户细分市场, GMV]
+      golden: ["各客户细分市场的 GMV 排名"]
+      joins: [CustomerOrders]
+
+  - id: q03-monthly-trend
+    question: 帮我看看按月的营收趋势
+    expect:
+      models: [Orders]
+      glossary: [月度趋势, GMV]
+      views: [MonthlyGmv]
+      golden: ["月度 GMV 和订单量趋势"]
+
+  - id: q04-pending-count
+    question: 待处理的订单有多少？
+    expect:
+      models: [Orders]
+      glossary: [订单状态]
+      golden: ["待处理订单有多少"]
+
+  # ---- 无词面重叠的语义近似问法（主要压测向量召回）----
+  - id: q05-semantic-scale
+    question: 客户花钱的总规模有多大？
+    expect:
+      glossary: [GMV]
+      views: [CustomerOrderSummary]
+
+  - id: q06-semantic-segment
+    question: 生意最好的客群是哪一类？
+    expect:
+      glossary: [客户细分市场]
+      views: [CustomerOrderSummary]
+
+  - id: q07-semantic-trend
+    question: 一年里每个月的业绩走向
+    expect:
+      glossary: [月度趋势]
+      views: [MonthlyGmv]
+
+  - id: q08-semantic-pending
+    question: 有多少单子还在处理中？
+    expect:
+      golden: ["待处理订单有多少"]

@@ -15,7 +15,7 @@ class Retriever:
         self.index = index
 
     def search(self, question: str, top_k: int = TOP_K) -> dict:
-        hits = self.index.bm25_search(question, top_k)
+        hits, retrieval_mode = self.index.hybrid_search(question, top_k)
         hit_docs = [self.index.docs[i] for i, _ in hits]
 
         # 模型/字段二次召回：类型过滤 BM25，避免被 golden SQL/术语文档淹没
@@ -47,6 +47,7 @@ class Retriever:
 
         packet = {
             "question": question,
+            "retrieval_mode": retrieval_mode,
             "synonym_expansions": self.index.expand_question(question),
             "glossary": [d.payload for d in glossary_hits],
             "models": [d.payload for d in model_docs][:8],

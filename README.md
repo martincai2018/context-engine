@@ -73,9 +73,40 @@ pi 注册（~/.pi/agent/mcp.json）：
 | CONTEXT_CHAR_BUDGET | 6000 | 上下文包字符预算 |
 | CONTEXT_DATA_DIR | ./data | 术语/golden 文件目录 |
 
+## 混合检索（BM25 + 向量 + RRF）
+
+安装可选向量依赖后自动启用（未装时优雅降级为纯 BM25）：
+
+```bash
+uv sync --extra vector                 # fastembed(ONNX) + LanceDB，首次运行下载 bge-small-zh-v1.5
+uv run python evals/run_eval.py        # 回归评测（8 用例 × 5 维度）
+CONTEXT_VECTOR=0 uv run python evals/run_eval.py   # 纯 BM25 基线对比
+```
+
+实测（evals/questions.yaml，含 4 条无词面重叠的语义近似问法）：
+
+| 模式 | 综合命中率 | 典型失败 |
+|---|---|---|
+| hybrid（BM25+向量+RRF） | **100%** | — |
+| 纯 BM25 | 95.5% | "客户花钱的总规模"漏召回 GMV 口径 |
+
+关键环境变量：`CONTEXT_VECTOR=0` 关闭向量、`CONTEXT_EMBED_MODEL` 换模型、
+`CONTEXT_BM25_WEIGHT`/`CONTEXT_VECTOR_WEIGHT` 调 RRF 权重。
+
+## 语义库建模流水线
+
+`scripts/bootstrap_mdl.py` 调 Wren MCP 的 `list_remote_tables`（响应已内联列信息），
+自动产出 MDL 初稿（模型 + 物理列 + 类型 + notNull），人工补业务命名/关系/指标后走评审部署：
+
+```bash
+uv run --with "mcp[cli]<2" python scripts/bootstrap_mdl.py > draft.mdl.json
+```
+
 ## 路线图
 
-- [ ] 向量召回（LanceDB + bge-small-zh，与 BM25 做 RRF 融合，接口已预留）
+- [x] 向量召回（LanceDB + bge-small-zh，与 BM25 做 RRF 融合）
+- [x] 上下文命中率回归评测（evals/，混合 100% vs BM25 95.5%）
+- [x] 物理库自动发现 → MDL 初稿（bootstrap_mdl.py）
 - [ ] LLM rerank
 - [ ] 从查询日志自动挖掘 golden SQL
-- [ ] 上下文命中率与 bad case 评测
+- [ ] 真实库百模型/千字段规模压测

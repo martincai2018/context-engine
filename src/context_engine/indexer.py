@@ -8,8 +8,10 @@ import jieba
 import yaml
 from rank_bm25 import BM25Okapi
 
-from .config import DATA_DIR
+from .config import DATA_DIR, VECTOR_ENABLED
 from .corpus import Doc
+from .fusion import reciprocal_rank_fusion
+from .vector_index import VectorIndex
 
 _TOKEN_RE = re.compile(r"[0-9a-zA-Z_]+")
 
@@ -28,6 +30,7 @@ class ContextIndex:
         self.synonym_map: dict[str, str] = {}     # 同义词 -> 规范术语
         self.relationships: list[dict] = []
         self.model_neighbors: dict[str, set[str]] = {}
+        self.vector = VectorIndex()
 
     # ---------- 构建 ----------
     def build(self, docs: list[Doc], mdl: dict) -> "ContextIndex":
@@ -35,6 +38,11 @@ class ContextIndex:
         self.bm25 = BM25Okapi([tokenize(d.text) for d in docs])
         self._load_synonyms()
         self._build_relationship_graph(mdl)
+        if VECTOR_ENABLED:
+            try:
+                self.vector.build(docs)
+            except Exception as exc:  # 模型下载失败等情况下降级为纯 BM25
+                print(f"[context-engine] 向量索引不可用，降级 BM25: {exc}")
         return self
 
     def _load_synonyms(self) -> None:
@@ -73,6 +81,14 @@ class ContextIndex:
         scores = self.bm25.get_scores(tokens)
         ranked = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)
         return [(i, float(s)) for i, s in ranked[:top_k] if s > 0]
+
+    def hybrid_search(self, question: str, top_k: int) -> tuple[list[tuple[int, float]], str]:
+        """BM25 + 向量 RRF 融合；向量不可用时返回纯 BM25 结果与模式标记。"""
+        bm25_hits = self.bm25_search(question, top_k * 2)
+        if self.vector.available:
+            vec_hits = self.vector.search(question, top_k * 2)
+            return reciprocal_rank_fusion(bm25_hits, vec_hits, top_k), "hybrid(bm25+vector+RRF)"
+        return bm25_hits[:top_k], "bm25"
 
     def bm25_search_typed(self, question: str, doc_types: tuple[str, ...], top_k: int) -> list[tuple[int, float]]:
         """限定文档类型的 BM25 检索（用于模型/字段的二次召回）。"""

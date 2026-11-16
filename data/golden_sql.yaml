@@ -31,3 +31,10 @@ queries:
   - 订单状态
   - 待处理
   - 计数
+- question: 高价值客户的平均客单价
+  sql: SELECT AVG(gmv) FROM (SELECT custkey, SUM(totalprice) AS gmv FROM "Orders"
+    GROUP BY custkey HAVING SUM(totalprice) > 100000)
+  tags:
+  - 客户
+  - 客单价
+  - 高价值

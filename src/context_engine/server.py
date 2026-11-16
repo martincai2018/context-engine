@@ -60,9 +60,11 @@ def add_golden_sql(question: str, sql: str, tags: list[str] | None = None) -> di
 
 @mcp.tool()
 def index_stats() -> dict:
-    """查看当前索引文档数与构成。"""
+    """查看当前索引文档数与构成（含向量索引状态）。"""
     index, _ = _ensure_index()
-    return index.stats()
+    stats = index.stats()
+    stats["vector"] = index.vector.stats()
+    return stats
 
 
 if __name__ == "__main__":

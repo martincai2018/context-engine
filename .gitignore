@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 *.log
 .python-version
+.lancedb/
+draft.mdl.json
+bootstrap.err

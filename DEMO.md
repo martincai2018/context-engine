@@ -170,12 +170,26 @@ PYTHONUTF8=1 PYTHONPATH=src uv run python -m context_engine.server
 前置：Wren 三服务（8000/9000/9001）已启动且 9001 上部署了 MDL；
 pi 的 `~/.pi/agent/mcp.json` 已注册 context（:9100）与 wren（:9000）两个服务器。
 
-## 7. 当前边界与路线图
+## 7. 混合检索与评测（2026-11 补齐）
+
+v0.2 起加入向量召回：fastembed 本地嵌入（BAAI/bge-small-zh-v1.5，512 维，ONNX 免 torch）
++ LanceDB 嵌入式存储，与 BM25 经 RRF 融合；未装 `[vector]` extra 时自动降级纯 BM25。
+
+回归评测（`evals/run_eval.py`，8 用例 × 5 维度，含 4 条无词面重叠的语义问法）：
+
+| 模式 | 综合命中率 | 典型差异 |
+|---|---|---|
+| hybrid（BM25+向量+RRF） | **100%** | "客户花钱的总规模"能召回 GMV 口径与 CustomerOrderSummary 视图 |
+| 纯 BM25（CONTEXT_VECTOR=0） | 95.5% | 同题漏召回 GMV 口径 |
+
+建模流水线 `scripts/bootstrap_mdl.py` 已验证：经 Wren MCP 自动发现 5 张物理表、
+46 个字段并生成 MDL 初稿（draft.mdl.json），人工补业务命名与关系后即可评审部署。
+
+## 8. 当前边界与路线图
 
 | 边界 | 说明 | 规划 |
 |---|---|---|
-| 纯语义近似问法弱 | BM25 依赖词面重叠，无重叠时召回下降 | LanceDB + bge-small-zh 向量召回，RRF 融合 |
-| 无 rerank | 检索结果按 BM25 单路分数排序 | 加 LLM/交叉编码器 rerank |
-| golden SQL 靠人工 | 目前手动或 add_golden_sql 写入 | 查询日志自动挖掘高频 SQL |
+| 无 rerank | 结果按 RRF 排名，无交叉编码器精排 | 加 LLM/交叉编码器 rerank |
+| golden SQL 靠人工 | 手动或 add_golden_sql 写入 | 查询日志自动挖掘高频 SQL |
 | 规模未验证 | 当前 26 篇文档的演示规模 | 真实库上百模型/千字段场景压测 |
-| 缺命中率评测 | 尚无量化指标 | 建问答回归集，统计上下文命中率与 SQL 正确率 |
+| 嵌入模型固定 | bge-small-zh 单语向，英文术语靠 BM25 补 | 多语/可配置嵌入，按数据源类型选模型 |
