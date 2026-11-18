@@ -17,6 +17,11 @@ vector = [
     "fastembed>=0.7.0",   # ONNX 本地嵌入，支持 BAAI/bge-small-zh-v1.5，无需 torch
     "lancedb>=0.15.0",    # 嵌入式向量库，无独立服务
 ]
+memory = [
+    "mem0ai>=2.0.6",      # Mem0 SDK v2：内置图记忆 + 混合检索
+    "chromadb>=0.6.0",    # 嵌入式向量存储，无独立服务
+    "ollama>=0.4.0",      # 本地 LLM/嵌入客户端（phi4 + bge-m3）
+]
 
 [tool.uv]
 package = false

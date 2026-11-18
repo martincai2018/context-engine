@@ -1,6 +1,7 @@
 """检索与上下文包组装：BM25 召回 → 关系图扩展 → 分节输出，受字符预算约束。"""
 from __future__ import annotations
 
+import os
 import re
 
 from .config import CONTEXT_CHAR_BUDGET, TOP_K
@@ -45,10 +46,22 @@ class Retriever:
         golden_hits = [d for d in hit_docs if d.type == "golden_sql"]
         metric_view_hits = [d for d in hit_docs if d.type in ("metric", "view", "enum")]
 
+        # 团队经验记忆（Mem0，可选组件；未装 memory extra 或服务异常时静默降级）
+        memories: list[dict] = []
+        if os.getenv("CONTEXT_MEMORY", "1") != "0":
+            try:
+                from memory import store as memory_store
+                memories = memory_store.recall(question, scope="all", limit=3)
+                retrieval_mode += "+memory"
+            except Exception as exc:  # 记忆层不可用不影响主检索
+                memories = [{"memory": f"(记忆层不可用: {type(exc).__name__})",
+                             "metadata": {"kind": "error"}}]
+
         packet = {
             "question": question,
             "retrieval_mode": retrieval_mode,
             "synonym_expansions": self.index.expand_question(question),
+            "team_memories": memories,
             "glossary": [d.payload for d in glossary_hits],
             "models": [d.payload for d in model_docs][:8],
             "join_candidates": _relationships_for(self.index, hit_models, neighbor_names),
@@ -84,6 +97,14 @@ class Retriever:
             lines.append("## 指标/视图/枚举")
             for mv in packet["metrics_views"]:
                 lines.append(f"- {mv.get('name')}")
+        real_memories = [m for m in packet["team_memories"]
+                         if m.get("metadata", {}).get("kind") != "error"]
+        if real_memories:
+            lines.append("## 团队历史经验（Mem0）")
+            for m in real_memories:
+                kind = m.get("metadata", {}).get("kind", "note")
+                lines.append(f"- [{kind}] {m.get('memory', '')}")
+
         if packet["golden_sql"]:
             lines.append("## Golden SQL 参考")
             for g in packet["golden_sql"]:
