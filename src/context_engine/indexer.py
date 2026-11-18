@@ -83,11 +83,14 @@ class ContextIndex:
         return [(i, float(s)) for i, s in ranked[:top_k] if s > 0]
 
     def hybrid_search(self, question: str, top_k: int) -> tuple[list[tuple[int, float]], str]:
-        """BM25 + 向量 RRF 融合；向量不可用时返回纯 BM25 结果与模式标记。"""
+        """BM25 + 向量 RRF 融合；向量不可用/索引损坏时自动降级纯 BM25。"""
         bm25_hits = self.bm25_search(question, top_k * 2)
         if self.vector.available:
-            vec_hits = self.vector.search(question, top_k * 2)
-            return reciprocal_rank_fusion(bm25_hits, vec_hits, top_k), "hybrid(bm25+vector+RRF)"
+            try:
+                vec_hits = self.vector.search(question, top_k * 2)
+                return reciprocal_rank_fusion(bm25_hits, vec_hits, top_k), "hybrid(bm25+vector+RRF)"
+            except Exception as exc:
+                print(f"[context-engine] 向量检索失败，本次降级 BM25: {type(exc).__name__}: {exc}")
         return bm25_hits[:top_k], "bm25"
 
     def bm25_search_typed(self, question: str, doc_types: tuple[str, ...], top_k: int) -> list[tuple[int, float]]:
