@@ -71,6 +71,30 @@ uv run --with "mcp[cli]<2" python evals/run_e2e_eval.py   # 退出码非 0 即�
 实现注意（踩过的坑）：wren 的 decimal128 经 JSON 序列化为字符串，比对前需数值化；
 dry_run 失败不抛 MCP 错误，而是 200 响应体里带 `errorCode`，评测器按 errorCode 判定。
 
+### 2.2 Agent 模式评测（真实 NL→SQL 能力）
+
+`evals/run_agent_eval.py` 不告诉 agent 金标 SQL，只给业务问题，让 pi agent 自主
+走 `search_context → dry_run → query`，从 json 事件流提取其最终查询结果比对：
+
+```bash
+uv run --with "mcp[cli]<2" python evals/run_agent_eval.py            # 每题 1 轮（pass@1）
+uv run --with "mcp[cli]<2" python evals/run_agent_eval.py --runs 3   # 多轮，量化模型波动
+```
+
+当前基线（ark-code-latest，单轮）：**5/5 通过，pass@1 = 100%，单题延迟 p50 ≈ 49s**。
+
+失败自动分类：WRONG_RESULT（结果不符）/ PARSE_FAIL（未按格式输出）/
+TOOL_ERROR（MCP 调用失败）/ TIMEOUT（>300s），多轮模式输出 pass@k 与失败分布。
+
+两套评测的定位：
+
+| | run_e2e_eval.py | run_agent_eval.py |
+|---|---|---|
+| 被测对象 | 检索 + 引擎确定性链路（金标 SQL 直执行） | 完整 agent（含 LLM 自主生成 SQL） |
+| 波动 | 无，可做 CI 硬门禁 | 有模型波动，建议多轮取 pass@k |
+| 耗时 | 秒级 | 每题约 50s |
+| 用途 | 每次代码/MDL 变更回归 | 模型升级、prompt/skill 调整前后对比 |
+
 ## 3. 案例二：混合检索 vs 纯 BM25（A/B 对照）
 
 | 模式 | 综合命中率 | 典型差异 |
@@ -230,6 +254,7 @@ bash deployment/start-all.sh && bash deployment/status.sh
 uv run python demo.py                                    # 本地检索演示
 uv run python evals/run_eval.py                          # 检索层回归（8 用例）
 uv run --with "mcp[cli]<2" python evals/run_e2e_eval.py  # 端到端回归（6 用例，需两 MCP 在线）
+uv run --with "mcp[cli]<2" python evals/run_agent_eval.py --runs 3  # agent 模式，真实 NL→SQL
 uv run --with "mcp[cli]<2" python demo_mcp.py            # 经 MCP 的检索演示
 
 # 记忆
