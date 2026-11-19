@@ -52,6 +52,25 @@ uv run python evals/run_eval.py                     # 混合检索
 CONTEXT_VECTOR=0 uv run python evals/run_eval.py    # 纯 BM25 基线
 ```
 
+### 2.1 端到端评测（context → wren 全链路）
+
+`evals/e2e_questions.yaml` + `evals/run_e2e_eval.py` 把金标问题真实跑过
+9100 检索和 9000 的 dry_run/query，输出三层指标：
+
+| 指标 | 含义 | 当前基线 |
+|---|---|---|
+| 检索命中率 | 期望模型/口径/视图/关系/golden 是否进上下文包 | 100%（6/6） |
+| dry-run 通过率 | 合法 SQL 必须通过、坏 SQL（负向用例）必须被拦截 | 100% |
+| 执行准确率 | 结果集集合比对（浮点容差 0.01，兼容 decimal 序列化字符串）+ shape 断言 | 100% |
+| 延迟 p50/p95 | 检索/dry_run/query 三阶段分别统计 | 检索 ~350ms，执行 ~280ms（热态） |
+
+```bash
+uv run --with "mcp[cli]<2" python evals/run_e2e_eval.py   # 退出码非 0 即未达标，可直接接 CI
+```
+
+实现注意（踩过的坑）：wren 的 decimal128 经 JSON 序列化为字符串，比对前需数值化；
+dry_run 失败不抛 MCP 错误，而是 200 响应体里带 `errorCode`，评测器按 errorCode 判定。
+
 ## 3. 案例二：混合检索 vs 纯 BM25（A/B 对照）
 
 | 模式 | 综合命中率 | 典型差异 |
@@ -209,7 +228,8 @@ bash deployment/start-all.sh && bash deployment/status.sh
 
 # 检索与评测
 uv run python demo.py                                    # 本地检索演示
-uv run python evals/run_eval.py                          # 回归评测
+uv run python evals/run_eval.py                          # 检索层回归（8 用例）
+uv run --with "mcp[cli]<2" python evals/run_e2e_eval.py  # 端到端回归（6 用例，需两 MCP 在线）
 uv run --with "mcp[cli]<2" python demo_mcp.py            # 经 MCP 的检索演示
 
 # 记忆

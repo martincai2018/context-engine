@@ -1,0 +1,79 @@
+# 端到端金标集：context(9100) 检索 → wren(9000) dry_run/query 全链路
+# expected_rows 做集合比对（顺序无关）；shape 断言列名与最小行数；dry_run_fail 为负向用例
+cases:
+  - id: e2e-01-status-count
+    question: 每种订单状态的订单量和 GMV
+    expect_retrieval:
+      models: [Orders]
+      glossary: [GMV, 订单状态]
+      golden: ["每种订单状态的订单量和 GMV"]
+    sql: |
+      SELECT orderstatus, COUNT(DISTINCT orderkey) AS order_count,
+             ROUND(SUM(totalprice), 2) AS gmv
+      FROM "Orders"
+      GROUP BY orderstatus
+      ORDER BY orderstatus
+    expected_columns: [orderstatus, order_count, gmv]
+    expected_rows:
+      - ["F", 7304, 1035681023.49]
+      - ["O", 7333, 1028376331.21]
+      - ["P", 363, 63339475.32]
+
+  - id: e2e-02-segment-rank
+    question: 各客户细分市场的 GMV 排名
+    expect_retrieval:
+      models: [Customer, Orders]
+      glossary: [客户细分市场]
+      joins: [CustomerOrders]
+    sql: |
+      SELECT c.marketsegment,
+             COUNT(DISTINCT o.orderkey) AS order_count,
+             ROUND(SUM(o.totalprice), 2) AS gmv
+      FROM "Customer" c
+      JOIN "Orders" o ON c.custkey = o.custkey
+      GROUP BY c.marketsegment
+      ORDER BY gmv DESC
+    expected_columns: [marketsegment, order_count, gmv]
+    shape:
+      min_rows: 4
+      first_row_first_col: BUILDING
+
+  - id: e2e-03-total-orders
+    question: 订单总量是多少
+    expect_retrieval:
+      models: [Orders]
+      glossary: [订单量]
+    sql: |
+      SELECT COUNT(DISTINCT orderkey) AS total_orders FROM "Orders"
+    expected_columns: [total_orders]
+    expected_rows:
+      - [15000]
+
+  - id: e2e-04-pending-count
+    question: 待处理的订单有多少
+    expect_retrieval:
+      models: [Orders]
+      golden: ["待处理订单有多少"]
+    sql: |
+      SELECT COUNT(*) AS pending_count FROM "Orders" WHERE orderstatus = 'P'
+    expected_columns: [pending_count]
+    expected_rows:
+      - [363]
+
+  - id: e2e-05-view-summary
+    question: 客户细分市场汇总视图
+    expect_retrieval:
+      views: [CustomerOrderSummary]
+    sql: |
+      SELECT * FROM CustomerOrderSummary ORDER BY gmv DESC
+    expected_columns: [marketsegment, order_count, gmv]
+    shape:
+      min_rows: 4
+
+  - id: e2e-06-bad-sql-blocked
+    question: 语法错误的 SQL 应被 dry_run 拦截
+    expect_retrieval:
+      models: [Orders]
+    sql: |
+      SELECT FROM FROM "Orders" WHERE
+    dry_run_fail: true
