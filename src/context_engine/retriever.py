@@ -19,8 +19,8 @@ class Retriever:
         hits, retrieval_mode = self.index.hybrid_search(question, top_k)
         hit_docs = [self.index.docs[i] for i, _ in hits]
 
-        # 模型/字段二次召回：类型过滤 BM25，避免被 golden SQL/术语文档淹没
-        typed_hits = self.index.bm25_search_typed(question, ("model", "column"), 6)
+        # 模型/字段二次召回：类型过滤的混合检索，百表规模下防止列文档淹没模型文档
+        typed_hits, _ = self.index.hybrid_search_typed(question, ("model", "column"), 8)
         model_docs = [self.index.docs[i] for i, _ in typed_hits]
 
         # 从命中的 golden SQL 解析模型引用，补全模型文档（中文问题匹配不到英文模型名的兜底）

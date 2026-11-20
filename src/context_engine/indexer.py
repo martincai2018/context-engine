@@ -93,6 +93,20 @@ class ContextIndex:
                 print(f"[context-engine] 向量检索失败，本次降级 BM25: {type(exc).__name__}: {exc}")
         return bm25_hits[:top_k], "bm25"
 
+    def hybrid_search_typed(self, question: str, doc_types: tuple[str, ...],
+                            top_k: int) -> tuple[list[tuple[int, float]], str]:
+        """类型过滤的混合检索：BM25 与向量都只在指定类型文档内排名，再 RRF 融合。
+        解决百表规模下列文档淹没模型文档的问题。"""
+        bm25_hits = self.bm25_search_typed(question, doc_types, top_k * 2)
+        if self.vector.available:
+            try:
+                vec_all = self.vector.search(question, top_k * 4)
+                vec_hits = [(i, s) for i, s in vec_all if self.docs[i].type in doc_types][:top_k * 2]
+                return reciprocal_rank_fusion(bm25_hits, vec_hits, top_k), "hybrid-typed"
+            except Exception as exc:
+                print(f"[context-engine] 类型化向量检索失败，降级 BM25: {type(exc).__name__}")
+        return bm25_hits[:top_k], "bm25-typed"
+
     def bm25_search_typed(self, question: str, doc_types: tuple[str, ...], top_k: int) -> list[tuple[int, float]]:
         """限定文档类型的 BM25 检索（用于模型/字段的二次召回）。"""
         assert self.bm25 is not None

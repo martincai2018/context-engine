@@ -7,3 +7,5 @@ __pycache__/
 draft.mdl.json
 bootstrap.err
 .mem0/
+scale/data/
+scale/scale_draft.mdl.json

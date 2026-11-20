@@ -1,0 +1,42 @@
+# 百表仿真数仓的业务术语表（压测专用，对应 8 个业务域）
+# 作用：中文业务问法 → 表名中的英文词元，查询期注入扩展 token
+terms:
+  - term: inventory
+    synonyms: [库存, 仓储, 库存周转, 备货, stock]
+    meaning: 库存与仓储域，表名含 inventory/stock/warehouse
+  - term: marketing
+    synonyms: [营销, 优惠券, 券核销, 活动, campaign, coupon]
+    meaning: 营销域，表名含 marketing/coupon/campaign
+  - term: logistics
+    synonyms: [物流, 配送, 快递, 时效, 发货, shipment, delivery]
+    meaning: 物流域，表名含 logistics/shipment/delivery/express
+  - term: supplier
+    synonyms: [供应商, 采购, 进货, purchase]
+    meaning: 供应商采购域，表名含 supplier/purchase
+  - term: finance
+    synonyms: [财务, 结算, 发票, 回款, 支付, settlement, invoice, payment]
+    meaning: 财务域，表名含 finance/settlement/invoice/payment
+  - term: customer
+    synonyms: [客户, 会员, 客群, member]
+    meaning: 客户会员域，表名含 customer/member
+  - term: product
+    synonyms: [商品, SKU, sku, 品类, 分类, product, category]
+    meaning: 商品域，表名含 product/sku/category
+  - term: order
+    synonyms: [订单, 成交, 下单, 退款, refund]
+    meaning: 订单交易域，表名含 order/refund
+  - term: gmv
+    synonyms: [GMV, 成交额, 销售额, 交易额]
+    meaning: 汇总指标，dws 层 gmv_sum 字段
+  - term: dws
+    synonyms: [汇总, 汇总层, 宽表汇总, 指标层]
+    meaning: 数仓汇总分层，表名前缀 dws_
+  - term: dwd
+    synonyms: [明细, 明细层, 事实明细]
+    meaning: 数仓明细分层，表名前缀 dwd_
+  - term: dim
+    synonyms: [维度, 维表, 维度表]
+    meaning: 维度分层，表名前缀 dim_
+  - term: ods
+    synonyms: [原始层, 贴源, 接入层]
+    meaning: 操作数据分层，表名前缀 ods_
