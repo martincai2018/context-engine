@@ -107,8 +107,9 @@ uv run --with "mcp[cli]<2" python scripts/bootstrap_mdl.py > draft.mdl.json
 ## 路线图
 
 - [x] 向量召回（LanceDB + bge-small-zh，与 BM25 做 RRF 融合）
+- [x] Cross-encoder 精排（bge-reranker-v2-m3，宽召回 30 → 精排截断，模型/字段分配额）
 - [x] 上下文命中率回归评测（evals/，混合 100% vs BM25 95.5%）
 - [x] 物理库自动发现 → MDL 初稿（bootstrap_mdl.py）
-- [ ] LLM rerank
+- [x] 百表规模压测（scale/，120 表 2322 字段，rerank 后域纯度 77%→85%）
 - [ ] 从查询日志自动挖掘 golden SQL
-- [ ] 真实库百模型/千字段规模压测
+- [ ] 真实 Doris 接入与线上基线

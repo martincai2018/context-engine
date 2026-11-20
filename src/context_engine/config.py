@@ -24,3 +24,9 @@ LANCEDB_URI = os.getenv("CONTEXT_LANCEDB", str(PROJECT_ROOT / ".lancedb"))
 RRF_K = int(os.getenv("CONTEXT_RRF_K", "60"))
 BM25_WEIGHT = float(os.getenv("CONTEXT_BM25_WEIGHT", "1.0"))
 VECTOR_WEIGHT = float(os.getenv("CONTEXT_VECTOR_WEIGHT", "1.0"))
+
+# ---- Cross-encoder 重排（可选，装了 [vector] extra 才启用）----
+RERANK_ENABLED = os.getenv("CONTEXT_RERANK", "1") != "0"
+RERANK_MODEL = os.getenv("CONTEXT_RERANK_MODEL", "BAAI/bge-reranker-v2-m3")
+# 粗召回宽度：重排前先取多少候选（宽进严出）
+RERANK_CANDIDATE_K = int(os.getenv("CONTEXT_RERANK_CANDIDATES", "30"))

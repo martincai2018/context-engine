@@ -36,12 +36,19 @@
 | 会员等级分布 | dwd_customer_member、dwd_customer_member_level |
 | 商品SKU分类 | dwd_product_sku、dim_product_sku、ods_product_sku |
 
-## 3. 仍然存在的精度问题（rerank 的必要性证据）
+## 3. Rerank 精排效果（已落地，run_rerank_compare.py）
 
-命中率到 100% 不等于排序精准：部分问题的 top3 混入跨域表
-（如"供应商采购"第 2 名是 dws_order_order，"GMV 分层"前两名是库存/财务表）。
-原因是仿真表大量复用通用列名（customer_id、amount、attr_xx），语义区分度低。
-这正是路线图中 **bge-reranker-v2-m3 精排**要解决的问题：粗召回取宽 → cross-encoder 重排。
+在粗召回（RRF）之上加 bge-reranker-v2-m3 cross-encoder，宽召回 30 候选精排到 top10：
+
+| 指标 | 无 rerank | 有 rerank | 改善 |
+|---|---:|---:|---:|
+| 域命中率 | 100% | 100% | 持平（粗排已覆盖） |
+| 平均域纯度 | 77% | **85%** | +8% |
+| 首位命中率 | 90% | **100%** | +10% |
+
+典型案例「供应商采购金额」：粗排 top5 混入 order/finance 跨域表，
+精排后 top5 全部为 supplier_purchase 相关表。实现注意：模型与字段必须**分配额召回**
+（model 6 + column 4），否则列文档会在精排中把模型挤出截断线（演示规模实测会导致 1 条回归）。
 
 另一个结构性事实：top-10 在 120 模型中只覆盖 8.3%，表数继续增长时，
 "先域过滤再表检索"（metadata 过滤 + 分层路由）会比单纯调大 top-k 更有效。

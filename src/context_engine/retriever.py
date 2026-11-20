@@ -19,9 +19,13 @@ class Retriever:
         hits, retrieval_mode = self.index.hybrid_search(question, top_k)
         hit_docs = [self.index.docs[i] for i, _ in hits]
 
-        # 模型/字段二次召回：类型过滤的混合检索，百表规模下防止列文档淹没模型文档
-        typed_hits, _ = self.index.hybrid_search_typed(question, ("model", "column"), 8)
-        model_docs = [self.index.docs[i] for i, _ in typed_hits]
+        # 模型/字段分配额召回：表级路由与字段选择是两个任务，
+        # 避免列文档在精排中把模型文档挤出截断线（百表规模下实测会导致模型漏召回）
+        model_hits, model_mode = self.index.rerank_typed(question, ("model",), 6)
+        col_hits, _ = self.index.hybrid_search_typed(question, ("column",), 4)
+        typed_mode = model_mode
+        model_docs = [self.index.docs[i] for i, _ in model_hits]
+        model_docs += [self.index.docs[i] for i, _ in col_hits][:4]
 
         # 从命中的 golden SQL 解析模型引用，补全模型文档（中文问题匹配不到英文模型名的兜底）
         referenced = set()
@@ -59,7 +63,7 @@ class Retriever:
 
         packet = {
             "question": question,
-            "retrieval_mode": retrieval_mode,
+            "retrieval_mode": f"{retrieval_mode}|{typed_mode}",
             "synonym_expansions": self.index.expand_question(question),
             "team_memories": memories,
             "glossary": [d.payload for d in glossary_hits],

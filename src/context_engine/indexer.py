@@ -8,9 +8,10 @@ import jieba
 import yaml
 from rank_bm25 import BM25Okapi
 
-from .config import DATA_DIR, VECTOR_ENABLED
+from .config import DATA_DIR, RERANK_CANDIDATE_K, RERANK_ENABLED, VECTOR_ENABLED
 from .corpus import Doc
 from .fusion import reciprocal_rank_fusion
+from .reranker import Reranker
 from .vector_index import VectorIndex
 
 _TOKEN_RE = re.compile(r"[0-9a-zA-Z_]+")
@@ -31,6 +32,7 @@ class ContextIndex:
         self.relationships: list[dict] = []
         self.model_neighbors: dict[str, set[str]] = {}
         self.vector = VectorIndex()
+        self.reranker = Reranker()
 
     # ---------- 构建 ----------
     def build(self, docs: list[Doc], mdl: dict) -> "ContextIndex":
@@ -43,6 +45,8 @@ class ContextIndex:
                 self.vector.build(docs)
             except Exception as exc:  # 模型下载失败等情况下降级为纯 BM25
                 print(f"[context-engine] 向量索引不可用，降级 BM25: {exc}")
+        if RERANK_ENABLED:
+            self.reranker.build()
         return self
 
     def _load_synonyms(self) -> None:
@@ -107,6 +111,15 @@ class ContextIndex:
                 print(f"[context-engine] 类型化向量检索失败，降级 BM25: {type(exc).__name__}")
         return bm25_hits[:top_k], "bm25-typed"
 
+    def rerank_typed(self, question: str, doc_types: tuple[str, ...],
+                     top_k: int) -> tuple[list[tuple[int, float]], str]:
+        """宽召回（RRF 取 RERANK_CANDIDATE_K）→ cross-encoder 精排 → top_k。"""
+        candidates, mode = self.hybrid_search_typed(question, doc_types, RERANK_CANDIDATE_K)
+        if not self.reranker.available:
+            return candidates[:top_k], mode
+        reranked = self.reranker.rerank(question, self.docs, candidates, top_k)
+        return reranked, mode + "+rerank"
+
     def bm25_search_typed(self, question: str, doc_types: tuple[str, ...], top_k: int) -> list[tuple[int, float]]:
         """限定文档类型的 BM25 检索（用于模型/字段的二次召回）。"""
         assert self.bm25 is not None
@@ -129,4 +142,5 @@ class ContextIndex:
         for d in self.docs:
             by_type[d.type] = by_type.get(d.type, 0) + 1
         return {"documents": len(self.docs), "by_type": by_type,
-                "synonyms": len(self.synonym_map), "relationships": len(self.relationships)}
+                "synonyms": len(self.synonym_map), "relationships": len(self.relationships),
+                "vector": self.vector.stats(), "reranker": self.reranker.stats()}
