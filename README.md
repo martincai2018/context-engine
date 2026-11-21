@@ -111,5 +111,5 @@ uv run --with "mcp[cli]<2" python scripts/bootstrap_mdl.py > draft.mdl.json
 - [x] 上下文命中率回归评测（evals/，混合 100% vs BM25 95.5%）
 - [x] 物理库自动发现 → MDL 初稿（bootstrap_mdl.py）
 - [x] 百表规模压测（scale/，120 表 2322 字段，rerank 后域纯度 77%→85%）
-- [ ] 从查询日志自动挖掘 golden SQL
+- [x] 查询日志自动挖掘 golden SQL（mining/，会话日志→候选队列→人工晋升）
 - [ ] 真实 Doris 接入与线上基线

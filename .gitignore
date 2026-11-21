@@ -9,3 +9,4 @@ bootstrap.err
 .mem0/
 scale/data/
 scale/scale_draft.mdl.json
+mining/golden_candidates.yaml

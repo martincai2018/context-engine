@@ -38,3 +38,9 @@ queries:
   - 客户
   - 客单价
   - 高价值
+- question: 用 wren 工具查最近 3 个月的月度 GMV 和订单量趋势，中文简要解读。
+  sql: SELECT month, gmv, order_count FROM "MonthlyGmv" ORDER BY month DESC LIMIT
+    3
+  tags:
+  - mined
+  - freq=2

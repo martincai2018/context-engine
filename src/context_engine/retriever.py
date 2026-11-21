@@ -45,10 +45,14 @@ class Retriever:
         neighbor_docs = [d for d in self.index.docs
                          if d.type == "model" and d.payload.get("name") in neighbor_names]
 
-        # 命中的术语（用于提示口径）
-        glossary_hits = [d for d in hit_docs if d.type == "glossary"]
-        golden_hits = [d for d in hit_docs if d.type == "golden_sql"]
-        metric_view_hits = [d for d in hit_docs if d.type in ("metric", "view", "enum")]
+        # 关键类型独立配额召回：避免语料增长后在全局 top-k 里互相挤占
+        glossary_hits, _ = self.index.hybrid_search_typed(question, ("glossary",), 4)
+        glossary_hits = [self.index.docs[i] for i, _ in glossary_hits]
+        golden_hits, _ = self.index.hybrid_search_typed(question, ("golden_sql",), 3)
+        golden_hits = [self.index.docs[i] for i, _ in golden_hits]
+        metric_view_hits, _ = self.index.hybrid_search_typed(
+            question, ("metric", "view", "enum"), 4)
+        metric_view_hits = [self.index.docs[i] for i, _ in metric_view_hits]
 
         # 团队经验记忆（Mem0，可选组件；未装 memory extra 或服务异常时静默降级）
         memories: list[dict] = []
